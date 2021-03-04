@@ -42,3 +42,112 @@ At this point the application is now using the defined middleware function, howe
 </pre>
 
 If we did not provide this call to next() the controller action would never be called, and our application would "hang" as it became stuck "loading" perpetually. 
+
+## Middleware for specific routes
+
+If we want to run middleware only for specific routes, we can define our middleware using a route. This will ensure that the middleware is only applied (and executed) on the specific route of which we have provided the middleware to. 
+
+<pre>
+<code>
+    app.get('/users', authMiddleware, (req, res) => {
+        res.sendFile(__dirname + '/users.html');
+    });
+</code>
+</pre>
+
+If we define the rest of the middleware function:
+
+<pre>
+<code>
+    function authMiddleware(req, res, next) {
+        req.query.admin ? next() : res.status(401).json({ status: 401, message: "You are not authorized to view this page."} );
+    };
+</code>
+</pre>
+
+Now, if we visit the /users route we must provide a query string parameter admin which must hold the value of true to access the page, if you do not have this you will see a 401 status Json response. 
+
+## The power of modification
+
+One of the most powerful aspects of middleware is the ability to send data between middleware. While there is no way to do this with the next function, it is possible to modify the req/res parameters to set customised data. For instance, if we wanted to set the admin variable to true, checking if a user was registered as an admin server side we could do so with:
+
+<pre>
+<code>
+    function authMiddleware(req, res, next) {
+        if (req.query.admin === 'true') {
+            req.admin = true;
+            next();
+        } else {
+            // error response
+        }
+    };
+</code>
+</pre>
+
+In this we check if the query string provided for admin is equal to true, if it is we set the req value of admin to equal true. 
+
+## Important notes on middleware
+
+1. Controller actions are just like middleware - Controller actions are essentially middleware themselves, but with no other middleware being activated after they are called. They act as the end of the middleware chain, which is why we omit the next calls from the controller actions. 
+
+
+2. Calling next is not the same as return - The next function does not actually return from the middleware function, this means that when next is called the enxt middleware will execute, this will continue until there is no more middleware left to execute, then after all middleware is done executing, the code will pick up where it left off from the previous functions within each middleware after the next() call. You can avoid the mistake of accidentally always returning an error to the user by returning when you call next();
+
+
+<pre>
+<code>
+    function middleware(req, res, next) {
+    if (req.valid) {
+        return next()
+    }
+    res.send('Invalid Request')
+    }
+</code>
+</pre>
+
+3. Middleware is called in the order it is used - this means that if we define all of our middleware using app.use() the middleware will essentially execute in the order it is declared, however, if we pass this to a route, we need to take into account the order of which we pass the middleware to the route.
+
+<pre>
+<code>
+    const express = require('express')
+    const app = express()
+
+    app.use(middlewareThree)
+    app.use(middlewareOne)
+
+    app.get('/', middlewareTwo, middlewareFour, (req, res) => {
+    console.log('Inside Home Page')
+    res.send('Home Page')
+    })
+
+    function middlewareOne(req, res, next) {
+    console.log('Middleware One')
+    next()
+    }
+
+    function middlewareTwo(req, res, next) {
+    console.log('Middleware Two')
+    next()
+    }
+
+    function middlewareThree(req, res, next) {
+    console.log('Middleware Three')
+    next()
+    }
+
+    function middlewareFour(req, res, next) {
+    console.log('Middleware Four')
+    next()
+    }
+
+    app.listen(3000, () => console.log('Server Started'))
+</code>
+</pre>
+
+<pre>
+    output:
+        Middleware Three
+        Middleware One
+        Middleware Two
+        Middleware Four
+</pre>
