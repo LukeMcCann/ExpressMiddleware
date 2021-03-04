@@ -40,3 +40,5 @@ At this point the application is now using the defined middleware function, howe
     }
 </code>
 </pre>
+
+If we did not provide this call to next() the controller action would never be called, and our application would "hang" as it became stuck "loading" perpetually. 

@@ -12,7 +12,7 @@ app.get('/', (req, res) => {
 });
 
 function loggingMiddleware(req, res, next) {
-    console.log('Hello from the middleware!');
+    console.log(`${new Date().toString()}: ${req.originalUrl}`);
     next();
 }
 
